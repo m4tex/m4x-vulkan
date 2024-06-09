@@ -4,7 +4,7 @@
 
 #include <stdexcept>
 #include "M4xApp.h"
-#include "VkUtils.h"
+
 
 namespace m4x {
     void M4xApp::run() {
@@ -22,9 +22,9 @@ namespace m4x {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-        _window = glfwCreateWindow(800, 800, "M4X dev build", nullptr, nullptr);
+        window = glfwCreateWindow(800, 800, "M4X dev build", nullptr, nullptr);
 
-        if(!_window)
+        if(!window)
             throw std::runtime_error("Failed to create window.");
     }
 
@@ -33,20 +33,32 @@ namespace m4x {
             throw std::runtime_error("Device doesn't support Vulkan.");
         }
 
-        VkUtils::CreateVkInstance(&_instance);
+        VkUtils::CreateVkInstance(&instance);
+        createSurface();
+        VkUtils::PickPhysicalDevice(instance, surface, &physicalDevice);
+        VkUtils::CreateLogicalDevice(physicalDevice, surface, &device);
+
     }
 
     void M4xApp::mainLoop() {
-        while(!glfwWindowShouldClose(_window)) {
+        while(!glfwWindowShouldClose(window)) {
             glfwPollEvents();
         }
     }
 
     void M4xApp::cleanup() {
-        vkDestroyInstance(_instance, nullptr);
+        vkDestroyDevice(device, nullptr);
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+        vkDestroyInstance(instance, nullptr);
 
-        glfwDestroyWindow(_window);
+        glfwDestroyWindow(window);
         glfwTerminate();
+    }
+
+    void M4xApp::createSurface() {
+        if (VK_SUCCESS != glfwCreateWindowSurface(instance, window, nullptr, &surface)) {
+            throw std::runtime_error("Failed to create a window surface.");
+        }
     }
 
 } // m4x

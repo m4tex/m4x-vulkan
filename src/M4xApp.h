@@ -8,12 +8,13 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include "VkUtils.h"
 
 namespace m4x {
     /**
      * A class holding all the application's logic.
      * @fn run Runs all the separate functions in order
-     * @fn createWindow Creates a GLFW window and sets it to _window
+     * @fn createWindow Creates a GLFW window and sets it to window
      * @fn initVulkan initializes a vulkan instance and window surface
      * @fn mainLoop
      */
@@ -21,12 +22,20 @@ namespace m4x {
     public:
         void run();
     private:
-        GLFWwindow* _window;
-        VkInstance _instance;
+        GLFWwindow* window;
+
+        VkInstance instance;
+        VkSurfaceKHR surface;
         VkPhysicalDevice physicalDevice;
+        VkDevice device;
+
+        QueueFamilyIndices queueFamilyIndices;
+        VkQueue graphicsQueue;
+        VkQueue presentQueue;
 
         void createWindow();
         void initVulkan();
+        void createSurface();
         void mainLoop();
         void cleanup();
     };
