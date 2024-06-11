@@ -36,8 +36,14 @@ namespace m4x {
         VkUtils::CreateVkInstance(&instance);
         createSurface();
         VkUtils::PickPhysicalDevice(instance, surface, &physicalDevice);
-        VkUtils::CreateLogicalDevice(physicalDevice, surface, &device);
 
+        queueFamilyIndices = VkUtils::FindQueueFamilies(physicalDevice, surface);
+        VkUtils::CreateLogicalDevice(physicalDevice, queueFamilyIndices, &device);
+
+        vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
+        vkGetDeviceQueue(device, queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
+
+        VkUtils::CreateSwapChain(physicalDevice, surface, window, &swapchain);
     }
 
     void M4xApp::mainLoop() {

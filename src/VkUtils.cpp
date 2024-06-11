@@ -10,6 +10,8 @@
 #include <optional>
 #include <set>
 #include <iostream>
+#include <limits>
+#include <algorithm>
 
 namespace m4x {
 
@@ -23,7 +25,7 @@ namespace m4x {
         for (const auto& layerName : validationLayers ) {
             bool layerFound = false;
 
-            for (auto layerProperties : availableLayers )
+            for (const auto& layerProperties : availableLayers )
                 if (strcmp(layerName, layerProperties.layerName) == 0) {
                     layerFound = true;
                     break;
@@ -76,7 +78,7 @@ namespace m4x {
             throw std::runtime_error("VkUtils: failed to create a Vulkan instance");
     }
 
-    void VkUtils::PickPhysicalDevice(VkInstance& instance, VkSurfaceKHR& surface, VkPhysicalDevice *physicalDevice) {
+    void VkUtils::PickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice *physicalDevice) {
         *physicalDevice = VK_NULL_HANDLE;
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -101,8 +103,8 @@ namespace m4x {
     }
 
     // TODO: make device picking score based or make an implementation that lets the user pick
-    bool VkUtils::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR& surface) {
-        QueueFamilyIndices indices = findQueueFamilies(device, surface);
+    bool VkUtils::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+        QueueFamilyIndices indices = FindQueueFamilies(device, surface);
 
         bool extensionsSupported = deviceExtensionSupport(device);
 
@@ -115,7 +117,7 @@ namespace m4x {
         return indices.isComplete() && extensionsSupported && swapChainAdequate;
     }
 
-    QueueFamilyIndices VkUtils::findQueueFamilies(VkPhysicalDevice& device, VkSurfaceKHR& surface) {
+    QueueFamilyIndices VkUtils::FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
         QueueFamilyIndices indices;
 
         uint32_t queueFamilyCount = 0;
@@ -147,18 +149,16 @@ namespace m4x {
         return indices;
     }
 
-    void VkUtils::CreateLogicalDevice(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkDevice* device) {
-        QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-
+    void VkUtils::CreateLogicalDevice(VkPhysicalDevice physicalDevice, QueueFamilyIndices indices, VkDevice* device) {
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         // In case the queue families overlap, we remove the duplicate indices
         std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
         float queuePriority = 1.0f;
-        for (auto queueFamily : uniqueQueueFamilies) {
+        for (const auto& queueFamily : uniqueQueueFamilies) {
             VkDeviceQueueCreateInfo queueCreateInfo{};
             queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+            queueCreateInfo.queueFamilyIndex = queueFamily;
             queueCreateInfo.queueCount = 1;
             queueCreateInfo.pQueuePriorities = &queuePriority;
             queueCreateInfos.push_back(queueCreateInfo);
@@ -187,7 +187,7 @@ namespace m4x {
         }
     }
 
-    bool VkUtils::deviceExtensionSupport(VkPhysicalDevice &device) {
+    bool VkUtils::deviceExtensionSupport(VkPhysicalDevice device) {
         uint32_t extensionCount = 0;
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -196,14 +196,14 @@ namespace m4x {
 
         std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
-        for (auto extension : extensionProperties) {
+        for (const auto& extension : extensionProperties) {
             requiredExtensions.erase(extension.extensionName);
         }
 
         return requiredExtensions.empty();
     }
 
-    SwapChainSupportDetails VkUtils::querySwapChainSupport(VkPhysicalDevice &device, VkSurfaceKHR &surface) {
+    SwapChainSupportDetails VkUtils::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
         SwapChainSupportDetails details;
 
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -227,15 +227,45 @@ namespace m4x {
         return details;
     }
 
-    SwapChainConfiguration VkUtils::selectSwapChainProperties(SwapChainSupportDetails properties) {
-        SwapChainConfiguration config;
+    // TODO: look into the HDR extension and immediate mode
+    SwapChainConfiguration VkUtils::selectSwapChainProperties(const SwapChainSupportDetails& properties, GLFWwindow* window) {
+        SwapChainConfiguration config{};
+
+        std::optional<VkSurfaceFormatKHR> format;
 
         for (const auto& surfaceFormat : properties.formats) {
-            std::cout << surfaceFormat.format << ' ' << surfaceFormat.colorSpace << std::endl;
+            if (surfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
+            surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                format = surfaceFormat;
+            }
         }
-        throw std::runtime_error("lol");
+
+        if (!format.has_value()) format = properties.formats[0];
+
+        config.surfaceFormat = format.value();
+        config.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+
+        if (properties.capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+            config.extent = properties.capabilities.currentExtent;
+        } else {
+            int width, height;
+            glfwGetFramebufferSize(window, &width, &height);
+
+            VkExtent2D extent = {static_cast<uint32_t>(width),
+                                 static_cast<uint32_t>(height)};
+
+            extent.width = std::clamp(extent.width, properties.capabilities.minImageExtent.width,
+                                      properties.capabilities.maxImageExtent.width);
+
+            extent.height = std::clamp(extent.height, properties.capabilities.minImageExtent.height,
+                                       properties.capabilities.maxImageExtent.height);
+        }
+
         return config;
     }
 
+    void VkUtils::CreateSwapChain(VkPhysicalDevice device, VkSurfaceKHR surface, GLFWwindow* window, VkSwapchainKHR *swapchain) {
+        selectSwapChainProperties(querySwapChainSupport(device, surface), window);
+    }
 
 } // m4x

@@ -25,7 +25,6 @@ const std::vector<const char*> validationLayers = {
  */
 const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME
 };
 
 // Enable validation layers for debug builds
@@ -76,7 +75,7 @@ namespace m4x {
 
         /**
          * Creates a Vulkan instance with engine defaults
-         * @param instance [out] Where to store the creates instance
+         * @param instance [out] The created instance
          */
         static void CreateVkInstance(VkInstance* instance);
 
@@ -84,9 +83,9 @@ namespace m4x {
          * Picks a suitable GPU
          * @param instance [in] Instance to query
          * @param surface [in] Surface the device has to be compatible with
-         * @param physicalDevice [out] Found GPU
+         * @param physicalDevice [out] The GPU found
          */
-        static void PickPhysicalDevice(VkInstance& instance, VkSurfaceKHR& surface, VkPhysicalDevice* physicalDevice);
+        static void PickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* physicalDevice);
 
         /**
          * Creates a logical device to interface with
@@ -94,9 +93,17 @@ namespace m4x {
          * @param surface [in] Surface that the device will be working with
          * @param device [out] The created device
          */
-        static void CreateLogicalDevice(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkDevice* device);
+        static void CreateLogicalDevice(VkPhysicalDevice physicalDevice, QueueFamilyIndices indices, VkDevice* device);
 
+        /**
+         * Finds needed queue families
+         * @param device [in] Device we want to query
+         * @param surface [in] Used for checking presenting compatibility, if nullptr no presentFamily will be looked for
+         * @return Queue family indices
+         */
+        static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
+        static void CreateSwapChain(VkPhysicalDevice device, VkSurfaceKHR surface, GLFWwindow* window, VkSwapchainKHR* swapchain);
 
     private:
 
@@ -105,7 +112,7 @@ namespace m4x {
          * @param device Device we want to check on
          * @return If the device supports the defined extensions
          */
-        static bool deviceExtensionSupport(VkPhysicalDevice& device);
+        static bool deviceExtensionSupport(VkPhysicalDevice device);
 
         /**
          * Checks if the defined validation layers are supported
@@ -113,17 +120,9 @@ namespace m4x {
          */
         static bool validationLayerSupport();
 
-        /**
-         * Finds needed queue families
-         * @param device [in] Device we want to query
-         * @param surface [in] Used for checking presenting compatibility, if nullptr no presentFamily will be looked for
-         * @return Queue family indices
-         */
-         static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice& device, VkSurfaceKHR& surface);
+        static SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-         static SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice& device, VkSurfaceKHR& surface);
-
-         static SwapChainConfiguration selectSwapChainProperties(SwapChainSupportDetails properties);
+        static SwapChainConfiguration selectSwapChainProperties(const SwapChainSupportDetails& properties, GLFWwindow* window);
 
         /**
          * Checks if the device supports all the required operations
@@ -131,7 +130,7 @@ namespace m4x {
          * @param surface [in] Surface to check compatibility with
          * @return If device is suitable for engine operations
          */
-        static bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR& surface);
+        static bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
 
     };
 } // m4x
