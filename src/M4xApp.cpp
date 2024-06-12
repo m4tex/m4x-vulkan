@@ -43,7 +43,16 @@ namespace m4x {
         vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
         vkGetDeviceQueue(device, queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
 
-        VkUtils::CreateSwapChain(physicalDevice, surface, window, &swapchain);
+        swapChainConfiguration = VkUtils::RetrieveSwapChainConfig(physicalDevice, surface, window);
+
+        VkUtils::CreateSwapChain(device, surface, queueFamilyIndices, swapChainConfiguration, &swapChain);
+
+        uint32_t imageCount = 0;
+        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+        swapChainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+
+
     }
 
     void M4xApp::mainLoop() {
@@ -53,6 +62,11 @@ namespace m4x {
     }
 
     void M4xApp::cleanup() {
+        for (auto& view : swapChainImageViews) {
+            vkDestroyImageView(device, view, nullptr);
+        }
+
+        vkDestroySwapchainKHR(device, swapChain, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyInstance(instance, nullptr);

@@ -227,7 +227,7 @@ namespace m4x {
         return details;
     }
 
-    // TODO: look into the HDR extension and immediate mode
+    // TODO: look into the HDR extension and immediate mode (on windows)
     SwapChainConfiguration VkUtils::selectSwapChainProperties(const SwapChainSupportDetails& properties, GLFWwindow* window) {
         SwapChainConfiguration config{};
 
@@ -261,11 +261,80 @@ namespace m4x {
                                        properties.capabilities.maxImageExtent.height);
         }
 
+        config.capabilities = properties.capabilities;
+
         return config;
     }
 
-    void VkUtils::CreateSwapChain(VkPhysicalDevice device, VkSurfaceKHR surface, GLFWwindow* window, VkSwapchainKHR *swapchain) {
-        selectSwapChainProperties(querySwapChainSupport(device, surface), window);
+    void VkUtils::CreateSwapChain(VkDevice device, VkSurfaceKHR surface, QueueFamilyIndices indices,
+                                  SwapChainConfiguration config,  VkSwapchainKHR *swapchain) {
+        uint32_t imageCount = config.capabilities.minImageCount + 1;
+
+        if (config.capabilities.maxImageCount > 0 && imageCount > config.capabilities.maxImageCount) {
+            imageCount = config.capabilities.maxImageCount;
+        }
+
+        VkSwapchainCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface = surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = config.surfaceFormat.format;
+        createInfo.imageColorSpace = config.surfaceFormat.colorSpace;
+        createInfo.imageExtent = config.extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+        if (indices.graphicsFamily != indices.presentFamily) {
+            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            createInfo.queueFamilyIndexCount = 2;
+            createInfo.pQueueFamilyIndices = queueFamilyIndices;
+        } else {
+            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        }
+
+        createInfo.preTransform = config.capabilities.currentTransform;
+        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        createInfo.presentMode = config.presentMode;
+        createInfo.clipped = VK_TRUE;
+        createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+        if (VK_SUCCESS != vkCreateSwapchainKHR(device, &createInfo, nullptr, swapchain)) {
+            throw std::runtime_error("Failed to create a swapChain.");
+        }
+    }
+
+    // Might refactor the code and move all the functionality here
+    SwapChainConfiguration
+    VkUtils::RetrieveSwapChainConfig(VkPhysicalDevice device, VkSurfaceKHR surface, GLFWwindow *window) {
+        return selectSwapChainProperties(querySwapChainSupport(device, surface), window);
+    }
+
+    void VkUtils::CreateImageViews(std::vector<VkImage>& swapChainImages, VkDevice device, VkFormat format, std::vector<VkImageView>& views) {
+        views.resize(swapChainImages.size());
+
+        for (size_t i = 0; i < swapChainImages.size(); ++i) {
+            VkImageViewCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.image = swapChainImages[i];
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format = format;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount = 1;
+
+            if (VK_SUCCESS != vkCreateImageView(device, &createInfo, nullptr, &views[i])) {
+                std::runtime_error("Failed to create image views");
+            }
+        }
     }
 
 } // m4x

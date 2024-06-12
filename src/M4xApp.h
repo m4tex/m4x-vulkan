@@ -34,7 +34,10 @@ namespace m4x {
         VkQueue graphicsQueue;
         VkQueue presentQueue;
 
-        VkSwapchainKHR swapchain;
+        SwapChainConfiguration swapChainConfiguration;
+        VkSwapchainKHR swapChain;
+        std::vector<VkImage> swapChainImages;
+        std::vector<VkImageView> swapChainImageViews;
 
         void createWindow();
         void initVulkan();

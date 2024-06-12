@@ -4,6 +4,8 @@
 // Created by m4tex on 6/8/24.
 //
 
+// TODO: refactor into OOP
+
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
@@ -61,6 +63,7 @@ namespace m4x {
      * Essentially similar to SwapChainSupportDetails but with single chosen entries
      */
     struct SwapChainConfiguration {
+        VkSurfaceCapabilitiesKHR capabilities;
         VkSurfaceFormatKHR  surfaceFormat;
         VkPresentModeKHR    presentMode;
         VkExtent2D          extent;
@@ -103,13 +106,33 @@ namespace m4x {
          */
         static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-        static void CreateSwapChain(VkPhysicalDevice device, VkSurfaceKHR surface, GLFWwindow* window, VkSwapchainKHR* swapchain);
+        /**
+         * Creates a swapChain config based on the physical device's capabilities
+         * @param device [in] Device for which the swapChain will be created
+         * @param surface [in] Surface that the swapChain will be connected to
+         * @param window [in] Swapchain's window
+         * @return Swapchain configuration
+         */
+        static SwapChainConfiguration RetrieveSwapChainConfig(VkPhysicalDevice device, VkSurfaceKHR surface, GLFWwindow* window);
+
+        /**
+         * Creates a swapChain
+         * @param device [in] Logical device for the swapChain
+         * @param surface [in] Surface that the swapChain will be displaying onto
+         * @param indices [in] Queue family indices for the swapChain
+         * @param config [in] Configuration to create from
+         * @param swapchain
+         */
+        static void CreateSwapChain(VkDevice device, VkSurfaceKHR surface, QueueFamilyIndices indices,
+                                    SwapChainConfiguration config,  VkSwapchainKHR *swapchain);
+
+        static void CreateImageViews(std::vector<VkImage>& swapChainImages, VkDevice device, VkFormat format, std::vector<VkImageView>& views);
 
     private:
 
         /**
          * Checks if the device supports engine extensions
-         * @param device Device we want to check on
+         * @param device [in] Device we want to check on
          * @return If the device supports the defined extensions
          */
         static bool deviceExtensionSupport(VkPhysicalDevice device);
@@ -120,8 +143,20 @@ namespace m4x {
          */
         static bool validationLayerSupport();
 
+        /**
+         * Retrieves supported features for the swapChain by the device
+         * @param device [in] Device to query
+         * @param surface [in] Surface to ensure compatibility
+         * @return Supported features and other info needed for creation
+         */
         static SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
+        /**
+         * Selects out of available properties for the creation of a swapChain
+         * @param properties [in] The available properties
+         * @param window [in] The window the swapChain will be created for
+         * @return A swapChain config that could be used for creation
+         */
         static SwapChainConfiguration selectSwapChainProperties(const SwapChainSupportDetails& properties, GLFWwindow* window);
 
         /**
