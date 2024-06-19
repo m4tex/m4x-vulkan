@@ -39,10 +39,58 @@ namespace m4x {
         std::vector<VkImage> swapChainImages;
         std::vector<VkImageView> swapChainImageViews;
 
+        VkPipelineLayout pipelineLayout;
+        VkRenderPass renderPass;
+        VkPipeline graphicsPipeline;
+
+        std::vector<VkFramebuffer> swapChainFramebuffers;
+
+        VkCommandPool commandPool;
+        VkCommandBuffer commandBuffer;
+
+        VkSemaphore imageAvailableSemaphore;
+        VkSemaphore renderFinishedSemaphore;
+        VkFence inFlightFence;
+
         void createWindow();
         void initVulkan();
         void createSurface();
+
+        /**
+         * Retrieves needed device queues and saves them in the class
+         */
+        void getDeviceQueues();
+
+        /**
+         * Creates a swap chain, also creates an image view for each image in the swap chain
+         */
+        void createSwapChain();
+
+        /**
+         * Creates a pipeline and populates the class with its layout and render pass
+         */
+        void createPipeline();
+
+        void createFramebuffers();
+
+        void createCommandPool();
+
+        void createCommandBuffer();
+
+        void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+        void drawFrame();
+
+        void createSyncObjects();
+
+        /**
+         * Main loop of the app
+         */
         void mainLoop();
+
+        /**
+         * Deallocates all the app resources in order
+         */
         void cleanup();
     };
 } // m4x

@@ -14,6 +14,7 @@
 // std
 #include <vector>
 #include <optional>
+#include <string>
 
 /**
  * Validation layers used in debug builds
@@ -128,6 +129,19 @@ namespace m4x {
 
         static void CreateImageViews(std::vector<VkImage>& swapChainImages, VkDevice device, VkFormat format, std::vector<VkImageView>& views);
 
+        static std::vector<char> ReadShader(const std::string& filename);
+
+        static void
+        CreateGraphicsPipeline(VkDevice device, VkExtent2D extent, VkFormat format, VkPipelineLayout *layout,
+                               VkRenderPass *renderPass, VkPipeline *graphicsPipeline);
+
+        static VkShaderModule CreateShaderModule(const std::vector<char>& code, VkDevice device);
+
+        static void
+        CreateFramebuffers(VkDevice device, std::vector<VkFramebuffer> &framebuffers, VkExtent2D extent,
+                           std::vector<VkImageView> &views, VkRenderPass renderPass);
+
+        static void CreateCommandPool(VkDevice device, uint32_t graphicsQueueFamilyIndex, VkCommandPool *commandPool);
     private:
 
         /**

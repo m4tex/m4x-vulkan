@@ -16,3 +16,5 @@ add_executable(m4xdev src/main.cpp
         src/VkUtils.h)
 
 target_link_libraries(m4xdev PRIVATE glm::glm  glfw Vulkan::Vulkan)
+
+add_custom_command(TARGET m4xdev POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/shaders/* ${CMAKE_BINARY_DIR}/shaders)
